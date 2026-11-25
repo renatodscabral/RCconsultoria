@@ -642,6 +642,7 @@ async function loadAll(){
   state.monthParams = await loadKey('esp2:monthParams', ()=>({}));
   state.saidas = await loadKey('esp2:saidas', ()=>[]);
   state.orcamento = await loadKey('esp2:orcamento', ()=>({}));
+  try{ state._erroLeitura = new Set(Object.keys(status).filter(k=>status[k]==='error')); }catch(e){} // v15.2: chave que não pôde ser lida nunca é regravada com dados de demonstração
   seedIfEmpty();
   state.loaded = true;
   try{
@@ -661,7 +662,7 @@ async function saveMonthMeta(){ await window.storage.set('esp2:monthMeta', JSON.
 async function saveWeights(){ await window.storage.set('esp2:weightsByMonth', JSON.stringify(state.weightsByMonth), true); await window.storage.set('esp2:weeksByMonth', JSON.stringify(state.weeksByMonth||{}), true); showToast(fcxV1377() ? 'Pesos e semanas dos dias salvos' : 'Pesos dos dias salvos'); }
 async function savePrestacaoModalidade(){ await window.storage.set('esp2:prestacaoModalidadePct', JSON.stringify(state.prestacaoModalidadePct), true); showToast('Percentuais de prestação salvos'); }
 async function saveMonthParams(){ await window.storage.set('esp2:monthParams', JSON.stringify(state.monthParams), true); showToast('Parâmetros salvos'); }
-async function saveSaidas(){ await window.storage.set('esp2:saidas', JSON.stringify(state.saidas), true); showToast('Saídas atualizadas'); }
+async function saveSaidas(){ if(fcxV152()) return saveSaidas152(); await window.storage.set('esp2:saidas', JSON.stringify(state.saidas), true); showToast('Saídas atualizadas'); }
 async function saveOrcamento(){ await window.storage.set('esp2:orcamento', JSON.stringify(state.orcamento), true); showToast('Orçamento salvo'); }
 
 // ---- gravação automática (debounced) ----
@@ -673,17 +674,17 @@ let _autosaveTimer = null;
 let _autosavePending = false;
 async function persistAll(){
   try{
-    await window.storage.set('esp2:config', JSON.stringify(state.config), true);
-    await window.storage.set('esp2:salesHistory', JSON.stringify(state.salesHistory), true);
-    await window.storage.set('esp2:monthMeta', JSON.stringify(state.monthMeta), true);
-    await window.storage.set('esp2:weightsByMonth', JSON.stringify(state.weightsByMonth), true);
-    await window.storage.set('esp2:weeksByMonth', JSON.stringify(state.weeksByMonth||{}), true); // v13.77
-    if(state.recebivelDiario && Object.keys(state.recebivelDiario).length) await window.storage.set('esp2:recebivelDiario', JSON.stringify(state.recebivelDiario), true); // v13.78
-    if(state.recebiveisCredsystem && Object.keys(state.recebiveisCredsystem).length) await window.storage.set('esp2:recebiveisCredsystem', JSON.stringify(state.recebiveisCredsystem), true); // v13.80
-    await window.storage.set('esp2:prestacaoModalidadePct', JSON.stringify(state.prestacaoModalidadePct), true);
-    await window.storage.set('esp2:monthParams', JSON.stringify(state.monthParams), true);
-    await window.storage.set('esp2:saidas', JSON.stringify(state.saidas), true);
-    await window.storage.set('esp2:orcamento', JSON.stringify(state.orcamento), true);
+    await fcxSet152('esp2:config', JSON.stringify(state.config), true);
+    await fcxSet152('esp2:salesHistory', JSON.stringify(state.salesHistory), true);
+    await fcxSet152('esp2:monthMeta', JSON.stringify(state.monthMeta), true);
+    await fcxSet152('esp2:weightsByMonth', JSON.stringify(state.weightsByMonth), true);
+    await fcxSet152('esp2:weeksByMonth', JSON.stringify(state.weeksByMonth||{}), true); // v13.77
+    if(state.recebivelDiario && Object.keys(state.recebivelDiario).length) await fcxSet152('esp2:recebivelDiario', JSON.stringify(state.recebivelDiario), true); // v13.78
+    if(state.recebiveisCredsystem && Object.keys(state.recebiveisCredsystem).length) await fcxSet152('esp2:recebiveisCredsystem', JSON.stringify(state.recebiveisCredsystem), true); // v13.80
+    await fcxSet152('esp2:prestacaoModalidadePct', JSON.stringify(state.prestacaoModalidadePct), true);
+    await fcxSet152('esp2:monthParams', JSON.stringify(state.monthParams), true);
+    await fcxSet152('esp2:saidas', JSON.stringify(state.saidas), true);
+    await fcxSet152('esp2:orcamento', JSON.stringify(state.orcamento), true);
     setSaveDot(false);
   }catch(e){ setSaveDot(true, true); /* tenta novamente na próxima alteração */ }
 }
@@ -1570,6 +1571,9 @@ function fcxV1396(){ try{ const P = window.__embed ? window.parent : null; retur
 function fcxV1399(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Recursos && P.Recursos.ativo('gestao_v1399') && P.CargaFeedback && typeof P.CargaFeedback.mostrar === 'function'); }catch(e){ return false; } } // v13.99: popup de crítica de carga (exibido pelo painel)
 function fcxCarga99(rel){ if(!fcxV1399()) return; try{ window.parent.CargaFeedback.mostrar(rel); }catch(e){} }
 function fcxArq99(file){ return [{nome:file.name, tamanho:file.size}]; }
+function fcxV152(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Recursos && P.Recursos.ativo('gestao_v152') && typeof P.g152==='function' && P.g152() && P.Saidas152 && typeof P.Saidas152.planejarImportacao==='function' && P.Pagto17 && typeof P.Pagto17.lerArquivo==='function'); }catch(e){ return false; } } // v15.2: fonte única de pagamentos (importação inteligente por mês + gravação conferida no banco)
+function fcxV1417(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Pagto17 && typeof P.Pagto17.ativo==='function' && P.Pagto17.ativo() && typeof P.Pagto17.lerArquivo==='function' && typeof P.Pagto17.interpretar==='function' && typeof P.Pagto17.relatorioCarga==='function'); }catch(e){ return false; } } // v14.17 (complemento): Saídas reconhece os dois layouts do Contas a Pagar do ERP (leitor único no painel)
+function fcxLeitor1522(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Pagto17 && typeof P.Pagto17.lerArquivo==='function' && typeof P.Pagto17.interpretar==='function' && P.Leitor1521 && typeof P.Leitor1521.interpretar==='function' && P.Saidas152 && typeof P.Saidas152.planejarImportacao==='function' && typeof P.Saidas152.conferirGravacao==='function'); }catch(e){ return false; } } // v15.2.2: leitor unificado dos dois ERPs + plano por mês + conferência no banco — SEM flag (Homologação, Produção e Falco); só exige que o painel-pai tenha os módulos
 function fcxV1387(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Recursos && P.Recursos.ativo('rd_cartao_v1387')); }catch(e){ return false; } } // v13.87: Recebível Diário · débito × crédito, prestação no débito por bandeira, Credsystem consolidada
 function fcxV1386(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Recursos && P.Recursos.ativo('contabil_v1386')); }catch(e){ return false; } } // v13.86: plano de contas lido do Módulo Contábil (somente leitura)
 function fcxV1385(){ try{ const P = window.__embed ? window.parent : null; return !!(P && P.Recursos && P.Recursos.ativo('fcx_periodo_v1385')); }catch(e){ return false; } } // v13.85: período por calendário + detalhamento diário em agrupadores
@@ -2569,6 +2573,40 @@ function statusToTipo(s){
 function importSaidasFile(input){
   const file = input.files[0]; if(!file) return;
   window.__origem99 = 'FCX · Saídas';
+  try{ input.value=''; }catch(e){}
+  /* v15.2.2: o leitor unificado (ERP Legado + ERP Sállamos) roda SEMPRE, em qualquer ambiente e sem flag. O importador genérico (Data, Conta, Valor) só atende planilha que não é baixa do ERP;
+     arquivo com cara de ERP (aba PGTO* / AgendaPagto ou cabeçalho parcial) nunca cai nele: mostra o diagnóstico do que faltou. */
+  if(!fcxLeitor1522()){ showToast('O painel carregado é mais antigo que esta tela do FCX (falta o leitor unificado v15.2.2). Recarregue a página com Ctrl+F5 e tente de novo.'); return; }
+  fcxImportSaidas152(file).then(ok=>{ if(!ok) importSaidasLegado(file); }).catch(err=>{ console.error('[saídas v15.2.2]', err); showToast('Importação não concluída: '+((err&&err.message)||err)); }); // se a gravação falhar NÃO volta ao leitor genérico (não reimporta)
+}
+/* v14.17 (complemento) · leitor dos dois layouts do ERP (modelo atual e modelo antigo): o painel abre o arquivo e interpreta (mesmo motor do botão "Importar Baixas do ERP (CNAB)" da DFC).
+   Devolve true quando o arquivo foi tratado aqui (inclusive quando nada entrou), false quando o layout não é nenhum dos dois (segue o leitor de sempre). */
+async function fcxImportSaidas17(file){
+  const P = window.parent.Pagto17, arq = await P.lerArquivo(file, window.XLSX), rel = P.interpretar(arq.sheets, {soBaixas:false});
+  if(!rel.layout) return false;
+  const mode = state._saidasImportMode || 'append';
+  if(!rel.linhas.length){
+    showToast('Nenhuma linha reconhecida no arquivo');
+    fcxCarga99(Object.assign(P.relatorioCarga('FCX · Saídas', arq, rel, {}), {processadas:0, erro:'Nenhuma linha válida depois dos filtros do layout reconhecido.'}));
+    return true;
+  }
+  const novas99 = new Set();
+  rel.linhas.forEach(s=>{
+    if(!state.config.accounts.includes(s.conta)){ state.config.accounts.push(s.conta); fcx1386Nova(s.conta); novas99.add(s.conta); }
+    if(!state.config.costCenters.includes(s.centro)) state.config.costCenters.push(s.centro);
+  });
+  const novos = rel.linhas.map(s=>Object.assign({}, s)); let reimp = 0;
+  if(mode==='replace') state.saidas = novos;
+  else { const ids = new Set(novos.map(x=>x.id)), antes = state.saidas.length; state.saidas = state.saidas.filter(x=>!ids.has(x.id)).concat(novos); reimp = antes + novos.length - state.saidas.length; } // ids estáveis: reimportar o mesmo arquivo não duplica
+  fcxCarga99(P.relatorioCarga('FCX · Saídas', arq, rel, {
+    campos:[['Modo', mode==='replace' ? 'substituir todas as saídas' : 'acrescentar às existentes'], ['Já existiam (atualizadas)', String(reimp)], ['Contas novas', String(novas99.size)]],
+    avisos:[...novas99].map(c=>'Conta nova: '+c+' — incluída no plano e enviada para revisão no Módulo Contábil')}));
+  const grava = [saveSaidas(), saveConfig()];
+  if(fcxV1378()){ state.cargaSaidas = { em: new Date().toISOString(), arquivo: file.name, linhas: novos.length, modo: mode }; grava.push(window.storage.set('esp2:cargaSaidas', JSON.stringify(state.cargaSaidas), true)); }
+  await Promise.all(grava); render();
+  return true;
+}
+function importSaidasLegado(file){
   readWorkbookFile(file, rows=>{
     const parsed = [], inc99 = [], novas99 = new Set(), rd = fcxV1378(); // v13.78
     rows.forEach((row,i99)=>{
@@ -2584,7 +2622,7 @@ function importSaidasFile(input){
       const extra = rd ? { ...(norm.formaPagamento!=null && String(norm.formaPagamento).trim() ? {formaPagamento:String(norm.formaPagamento).trim()} : {}), ...(norm.valorLiquido!=null && norm.valorLiquido!=='' ? {valorLiquido:Number(norm.valorLiquido)||0} : {}), ...(norm.item!=null && String(norm.item).trim() ? {item:String(norm.item).trim()} : {}) } : {}; // v13.78
       parsed.push({id:uid(), date:iso, conta, centro, tipo:statusToTipo(norm.status), valor:Number(norm.valor)||0, fornecedor:(norm.fornecedor||'').toString().trim(), obs:(norm.obs||'').toString().trim(), ...extra});
     });
-    if(parsed.length===0){ showToast('Nenhuma linha reconhecida no arquivo'); fcxCarga99({origem:'FCX · Saídas', arquivos:fcxArq99(file), lidas:rows.length, processadas:0, invalidas:inc99.length, inconsistencias:inc99, erro:'Nenhuma linha reconhecida no arquivo (colunas esperadas: Data, Conta, Valor).'}); return; }
+    if(parsed.length===0){ showToast('Nenhuma linha reconhecida no arquivo'); fcxCarga99({origem:'FCX · Saídas', arquivos:fcxArq99(file), lidas:rows.length, processadas:0, invalidas:inc99.length, inconsistencias:inc99, erro:'Nenhuma linha reconhecida no arquivo (colunas esperadas: Data, Conta, Valor).'+(state._diag1521 ? ' '+state._diag1521 : '')}); return; }
     const mode = state._saidasImportMode || 'append';
     fcxCarga99({origem:'FCX · Saídas', arquivos:fcxArq99(file), lidas:rows.length, processadas:parsed.length, invalidas:inc99.length, total:parsed.reduce((a,x)=>a+(Number(x.valor)||0),0), totalRotulo:'Total das saídas do arquivo',
       inconsistencias:inc99.concat([...novas99].map(c=>({tipo:'aviso', item:'Conta nova: '+c, motivo:'incluída no plano e enviada para revisão no Módulo Contábil'}))), campos:[['Modo', mode==='replace' ? 'substituir todas as saídas' : 'acrescentar às existentes'], ['Contas novas', String(novas99.size)]]});
@@ -2596,6 +2634,138 @@ function importSaidasFile(input){
 }
 window.importSaidasFile = importSaidasFile;
 function setSaidasImportMode(v){ state._saidasImportMode=v; } window.setSaidasImportMode=setSaidasImportMode;
+
+/* =========================================================================
+   v15.2 · FONTE ÚNICA DE PAGAMENTOS — FCX › Saídas (gestao_v152)
+   v15.2.2: a importação (leitor unificado, plano por mês, conferência no banco, painel de conflito) roda SEM flag, em qualquer ambiente (fcxLeitor1522). A compactação/cache, a releitura da DFC e o resto da v15.2 seguem atrás de fcxV152(). Os motores (leitor dos dois layouts, plano por mês, conferência no banco) moram no painel: window.parent.Pagto17 / Saidas152.
+   ========================================================================= */
+function fcxEsc152(t){ return String(t==null?'':t).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fcxMes152(m){ const p=String(m).split('-'); return p.length===2 ? p[1]+'/'+p[0] : String(m); }
+function fcxR152(cents){ return BRL2((Number(cents)||0)/100); }
+function fcxKB152(n){ n=Number(n)||0; return n>=1048576 ? (n/1048576).toFixed(1).replace('.',',')+' MB' : Math.max(1,Math.round(n/1024))+' KB'; }
+/** igual a window.storage.set, mas nunca grava uma chave cuja leitura falhou nesta sessão (persistAll não pode sobrescrever dado real com dado inicial) */
+function fcxSet152(k, v, sh){ if(fcxV152() && state._erroLeitura && state._erroLeitura.has(k)) return Promise.resolve(); return window.storage.set(k, v, sh); }
+/** grava as Saídas no banco online e CONFERE: banner com registros e R$ gravados (total e dos meses pedidos). Importação: conferência completa (lê de volta); edição comum: confere tamanho e impressão no servidor. */
+async function saveSaidas152(info){
+  info = info || {}; const rotulo = info.rotulo || 'Saídas gravadas', quando = new Date().toISOString();
+  if(state._erroLeitura && state._erroLeitura.has('esp2:saidas')){
+    const m = 'As Saídas não puderam ser lidas do banco nesta sessão; para não apagar nada, a gravação foi bloqueada. Recarregue o painel e tente de novo.';
+    state._saidasGravacao = { ok:false, erro:m, em:quando, rotulo }; showToast(m); render(); throw new Error(m);
+  }
+  const P = window.parent, texto = JSON.stringify(state.saidas), meses = info.meses || [ (state._saidaFilter && state._saidaFilter.month) || toISO(new Date()).slice(0,7) ];
+  try{ await window.storage.set('esp2:saidas', texto, true); }
+  catch(e){ state._saidasGravacao = { ok:false, erro:'A gravação das Saídas no banco falhou: '+((e&&e.message)||e), em:quando, rotulo }; render(); throw e; }
+  let conf; try{ conf = await P.Saidas152.conferirGravacao('esp2:saidas', texto, meses, { completo: info.completo===true || texto.length < 200000 }); }
+  catch(e){ conf = { ok:false, erro:'Não consegui conferir a gravação: '+((e&&e.message)||e) }; }
+  state._saidasGravacao = Object.assign({ em:quando, meses, rotulo }, conf);
+  showToast(conf.ok ? 'Saídas gravadas no banco: '+conf.n+' registro(s)' : 'Atenção: a conferência da gravação no banco não fechou — veja o aviso na tela');
+  if(info.dfc){ try{ P.Saidas152.aposGravar(); }catch(e){} } // a DFC relê a base oficial e regrava a base mensal dos meses com lote CNAB
+  return conf;
+}
+/** Contas a Pagar / baixas do ERP (layout atual ou legado PGTO.*) → plano por mês → (confirmação se encolhe) → gravação conferida. true = tratado aqui; false = layout não reconhecido (segue o leitor simples). */
+async function fcxImportSaidas152(file){
+  const PG = window.parent.Pagto17, SX = window.parent.Saidas152; let arq, rel;
+  if(state._erroLeitura && state._erroLeitura.has('esp2:saidas')){ showToast('As Saídas não puderam ser lidas do banco nesta sessão: recarregue o painel antes de importar (nada foi alterado).'); return true; }
+  state._diag1521 = '';
+  try{ arq = await PG.lerArquivo(file, window.XLSX); rel = PG.interpretar(arq.sheets, {soBaixas:false, v1521:true}); }catch(e){ console.warn('[saídas v15.2.2] leitura', e); state._diag1521 = 'Não consegui abrir o arquivo como planilha: '+((e&&e.message)||e)+'.'; showToast(state._diag1521); fcxCarga99({origem:'FCX · Saídas', arquivos:fcxArq99(file), lidas:0, processadas:0, invalidas:0, erro:state._diag1521}); return true; }
+  if(!rel.layout){ state._diag1521 = (rel.avisos||[]).join(' ');
+    if(rel.pareceERP){ showToast('Arquivo do ERP não reconhecido: '+state._diag1521); fcxCarga99(Object.assign(PG.relatorioCarga('FCX · Saídas', arq, rel, {}), {processadas:0, erro:state._diag1521})); return true; } // v15.2.2: com cara de ERP nunca vai para o importador genérico
+    return false; } // não é baixa do ERP: segue o importador simples (Data, Conta, Valor), que repete o diagnóstico se também não servir
+  const modo = state._saidasImportMode || 'smart';
+  if(!rel.linhas.length){
+    showToast('Nenhuma linha reconhecida no arquivo');
+    fcxCarga99(Object.assign(PG.relatorioCarga('FCX · Saídas', arq, rel, {campos:fcxCamposModelo152(rel)}), {processadas:0, erro:'Nenhuma baixa válida depois dos filtros do modelo reconhecido ('+fcxModelo152(rel)+').'}));
+    return true;
+  }
+  const novos = rel.linhas.map(s=>Object.assign({}, s)), plano = SX.planejarImportacao(state.saidas, novos, modo, {layout: rel.layout, origem: rel.origemModelo, conflito:'bloquear'}), rr = plano.relatorio;
+  const encolhe = rr.meses.filter(m=>!m.bloqueado && m.substituidos.n > m.noArquivo.n), conflitos = rr.conflitos;
+  const pd = { file:file.name, arq, rel, novos, plano, modo, meses: rr.mesesGravados, encolhe, conflitos, substituir:false };
+  if(modo==='replace' || encolhe.length || conflitos.length){ state._saidasPendente152 = pd; render(); showToast(conflitos.length ? 'Sobreposição entre ERPs: o mês em conflito não será gravado sem a sua confirmação' : 'Confira o resumo e confirme para gravar'); return true; }
+  state._saidasPendente152 = null;
+  return aplicarImportacaoSaidas152(pd);
+}
+async function aplicarImportacaoSaidas152(pd){
+  const PG = window.parent.Pagto17, rel = pd.rel, rr = pd.plano.relatorio;
+  const antesSaidas = state.saidas, antesContas = state.config.accounts.slice(), antesCentros = state.config.costCenters.slice(), novas = new Set();
+  (pd.plano.efetivas || rel.linhas).forEach(s=>{ // v15.2.1: linhas de mês bloqueado por sobreposição não criam conta nem centro de custo
+    if(!state.config.accounts.includes(s.conta)){ state.config.accounts.push(s.conta); fcx1386Nova(s.conta); novas.add(s.conta); }
+    if(!state.config.costCenters.includes(s.centro)) state.config.costCenters.push(s.centro);
+  });
+  state.saidas = pd.plano.resultado; state._saidasPendente152 = null;
+  let conf = null;
+  try{
+    const grava = [saveSaidas152({ meses: pd.meses, rotulo:'Importação '+pd.file, completo:true, dfc:true }), saveConfig()];
+    if(fcxV1378()){ state.cargaSaidas = { em: new Date().toISOString(), arquivo: pd.file, linhas: (pd.plano.efetivas || rel.linhas).length, modo: pd.modo }; grava.push(window.storage.set('esp2:cargaSaidas', JSON.stringify(state.cargaSaidas), true)); }
+    conf = (await Promise.all(grava))[0];
+  }catch(err){
+    state.saidas = antesSaidas; state.config.accounts = antesContas; state.config.costCenters = antesCentros; // não deixa na tela o que o banco não recebeu
+    render(); showToast('Importação NÃO gravada: '+((err&&err.message)||err)+' — a tela voltou ao que estava no banco.');
+    return true;
+  }
+  const campos = fcxCamposModelo152(rel).concat([['Modo', rr.rotuloModo], ['Títulos no arquivo', String(rr.linhasArquivo)], ['Gravados', String(rr.inseridos)+' · '+fcxR152(rr.inseridosCents)]]);
+  if(rr.bloqueados) campos.push(['NÃO gravados (mês com lançamentos do outro ERP)', rr.bloqueados+' título(s) · '+fcxR152(rr.bloqueadosCents)+' · '+rr.mesesBloqueados.map(fcxMes152).join(', ')]);
+  campos.push(['Substituídos (mesmo mês e mesmo ERP)', String(rr.removidos)], ['Contas novas', String(novas.size)],
+    ['Gravado no banco (conferido)', conf.ok ? conf.n+' registro(s) · '+fcxR152(conf.cents) : 'NÃO fechou: '+(conf.erro||'')]);
+  (pd.meses||[]).forEach(mes=>{ const m = conf.porMes && conf.porMes[mes]; if(m) campos.push(['Mês '+fcxMes152(mes), m.n+' título(s) · '+fcxR152(m.cents)+' (Pago: '+m.pago.n+' · '+fcxR152(m.pago.cents)+')']); });
+  const rel99 = PG.relatorioCarga('FCX · Saídas', pd.arq, rel, { campos, avisos: rr.avisos.concat([...novas].map(c=>'Conta nova: '+c+' — incluída no plano e enviada para revisão no Módulo Contábil')) });
+  rel99.processadas = rr.inseridos; rel99.total = (rr.inseridosCents||0)/100; // o relatório mostra o que foi gravado (meses bloqueados não contam)
+  if(!conf.ok) rel99.erro = conf.erro || 'A conferência no banco não fechou.';
+  fcxCarga99(rel99);
+  render(); return true;
+}
+function fcxModelo152(rel){ const o = rel && rel.origemModelo, L = window.parent.Leitor1521; return (L && L.ROTULO_LAYOUT && L.ROTULO_LAYOUT[rel.layout]) || (o==='erp_legado' ? 'ERP Legado' : o==='erp_sallamos' ? 'ERP Sállamos' : 'ERP'); }
+function fcxCamposModelo152(rel){ const c = [['Modelo do arquivo', fcxModelo152(rel)]]; if(rel.competencias && rel.competencias.length) c.push(['Competências no arquivo', rel.competencias.map(fcxMes152).join(', ')]); if(rel.contagem && rel.contagem.naoPago) c.push(['Fora por Status diferente de Pago', rel.contagem.naoPago+' linha(s)']); if(rel.contagem && rel.contagem.totais) c.push(['Totais/rodapés ignorados', String(rel.contagem.totais)]); if(rel.contagem && rel.contagem.valorZero) c.push(['Pago com Valor Pago zerado (ignorados)', rel.contagem.valorZero+' linha(s)']); if(rel.contagem && rel.contagem.crediario) c.push(['Crediário (4-CR) importado — fora do desdobramento CNAB', rel.contagem.crediario+' linha(s)']); return c; }
+function substituirConflitoSaidas152(){ const pd = state._saidasPendente152; if(!pd) return; pd.substituir = true; pd.plano = window.parent.Saidas152.planejarImportacao(state.saidas, pd.novos, pd.modo, {layout: pd.rel.layout, origem: pd.rel.origemModelo, conflito:'substituir'}); pd.meses = pd.plano.relatorio.mesesGravados; render(); }
+function bloquearConflitoSaidas152(){ const pd = state._saidasPendente152; if(!pd) return; pd.substituir = false; pd.plano = window.parent.Saidas152.planejarImportacao(state.saidas, pd.novos, pd.modo, {layout: pd.rel.layout, origem: pd.rel.origemModelo, conflito:'bloquear'}); pd.meses = pd.plano.relatorio.mesesGravados; render(); }
+window.substituirConflitoSaidas152 = substituirConflitoSaidas152; window.bloquearConflitoSaidas152 = bloquearConflitoSaidas152;
+function confirmarImportacaoSaidas152(){ const pd = state._saidasPendente152; if(!pd) return; aplicarImportacaoSaidas152(pd).catch(e=>{ console.error('[saídas v15.2]', e); showToast('Importação não concluída: '+((e&&e.message)||e)); }); }
+function cancelarImportacaoSaidas152(){ state._saidasPendente152 = null; render(); showToast('Importação cancelada: nada foi alterado.'); }
+window.confirmarImportacaoSaidas152 = confirmarImportacaoSaidas152; window.cancelarImportacaoSaidas152 = cancelarImportacaoSaidas152;
+function fcxSelectModo152(){ const m = state._saidasImportMode || 'smart', o = (v,t)=>'<option value="'+v+'"'+(m===v?' selected':'')+'>'+t+'</option>'; return '<select onchange="setSaidasImportMode(this.value)">'+o('smart','Inteligente por mês (recomendado)')+o('append','Adicionar aos lançamentos existentes')+o('replace','Substituir todos os lançamentos')+'</select>'; }
+function fcxHintImport152(){ return '<p class="hint" id="saidasFonteUnica152" style="margin:0 0 10px;"><b>Fonte única de pagamentos.</b> É aqui que entram as baixas dos dois ERPs: o <b>ERP Legado</b> (Relação dos Títulos Pagos · aba PGTO*, ou AgendaPagto se não houver) e o <b>ERP Sállamos</b> (só títulos com Status <b>Pago</b>). A DFC lê os títulos <b>Pago</b> desta base para desdobrar os lotes CNAB. No modo <b>Inteligente por mês</b>, cada mês do arquivo troca só os títulos <b>do mesmo ERP</b> naquele mês — subir o arquivo atualizado do dia não duplica nada; meses que não estão no arquivo e lançamentos manuais não são tocados. Se o mês do arquivo já tiver lançamentos do <b>outro</b> ERP, o painel avisa e bloqueia esse mês (só troca se você confirmar). Depois de gravar, o painel confere no banco e mostra quantos registros e quantos R$ ficaram gravados.</p>'; }
+/** acima da tela de Saídas: confirmação pendente (arquivo com menos títulos que o gravado / Substituir) e o resultado da última gravação conferida no banco */
+function fcxPainelSaidas152(){
+  if(!fcxLeitor1522()) return ''; let h = '';
+  const pd = state._saidasPendente152;
+  if(pd){
+    const rr = pd.plano.relatorio, motivo = pd.modo==='replace' ? 'O modo Substituir apaga as <b>'+rr.antes+'</b> saída(s) atuais e grava só as do arquivo.' : !pd.encolhe.length ? 'Arquivo do <b>'+fcxEsc152(rr.rotuloOrigem||'ERP')+'</b>: confira os meses abaixo antes de gravar.' : 'O arquivo traz <b>menos títulos</b> do que já está gravado em '+pd.encolhe.map(m=>fcxMes152(m.mes)+' ('+m.noArquivo.n+' no arquivo × '+m.antes.n+' gravados)').join(', ')+'. Confirme se o arquivo cobre o mês inteiro: os títulos do mesmo layout que não estão nele serão removidos.';
+    const sit = m => m.bloqueado ? '<b style="color:var(--red);">Bloqueado</b> · já tem '+m.conflito.rotuloOutra : m.conflito ? '<b style="color:var(--red);">Substitui '+m.conflito.rotuloOutra+'</b>' : (m.substituidos.n ? 'Troca '+m.substituidos.n+' do mesmo ERP' : 'Grava');
+    const lin = rr.meses.map(m=>'<tr><td>'+fcxMes152(m.mes)+'</td><td class="num">'+m.noArquivo.n+'</td><td class="num">'+fcxR152(m.noArquivo.cents)+'</td><td class="num">'+m.antes.n+'</td><td class="num">'+fcxR152(m.antes.cents)+'</td><td class="num">'+m.substituidos.n+'</td><td class="num">'+m.depois.n+'</td><td class="num">'+fcxR152(m.depois.cents)+'</td><td>'+sit(m)+'</td></tr>').join('');
+    const confl = rr.conflitos || [], livres = rr.mesesGravados || [];
+    let alerta = '';
+    if(confl.length && !pd.substituir){
+      alerta = '<div id="sobreposicao152" style="margin:10px 0;padding:10px 12px;border:1px solid #EAC5BF;border-left:4px solid var(--red);background:var(--red-soft);border-radius:8px;font-size:13px;"><b style="color:var(--red);">Sobreposição entre ERPs bloqueada.</b>'
+        +confl.map(c=>'<div style="margin-top:4px;">O mês <b>'+fcxMes152(c.mes)+'</b> já possui <b>'+c.n+'</b> lançamento(s) do <b>'+fcxEsc152(c.rotuloOutra)+'</b> ('+fcxR152(c.cents)+') e o arquivo importado é do <b>'+fcxEsc152(rr.rotuloOrigem)+'</b> ('+c.noArquivo.n+' título(s) · '+fcxR152(c.noArquivo.cents)+'). Para não sobrepor nem duplicar pagamentos, <b>este mês não será gravado</b>.</div>').join('')
+        +'<div style="margin-top:6px;" class="hint">'+(livres.length ? 'Os demais meses do arquivo ('+livres.map(fcxMes152).join(', ')+') seguem normalmente. ' : 'Nenhum outro mês do arquivo para gravar. ')+'Lançamentos manuais e meses que não estão no arquivo nunca são alterados. Se a troca for mesmo o que você quer, use “Substituir” — nada é apagado sem a sua confirmação.</div></div>';
+    } else if(confl.length && pd.substituir){
+      alerta = '<div id="sobreposicao152" style="margin:10px 0;padding:10px 12px;border:1px solid #EAC5BF;border-left:4px solid var(--red);background:var(--red-soft);border-radius:8px;font-size:13px;"><b style="color:var(--red);">Substituição entre ERPs — confirme com atenção.</b>'
+        +confl.map(c=>'<div style="margin-top:4px;">Em <b>'+fcxMes152(c.mes)+'</b> os <b>'+c.n+'</b> lançamento(s) do <b>'+fcxEsc152(c.rotuloOutra)+'</b> ('+fcxR152(c.cents)+') serão <b>apagados</b> e trocados pelos <b>'+c.noArquivo.n+'</b> do <b>'+fcxEsc152(rr.rotuloOrigem)+'</b> ('+fcxR152(c.noArquivo.cents)+'). Lançamentos manuais ficam.</div>').join('')+'</div>';
+    }
+    const nomeOutros = [...new Set(confl.map(c=>c.rotuloOutra))].join(' / '), mesesConf = confl.map(c=>fcxMes152(c.mes)).join(', ');
+    const botoes = confl.length
+      ? (pd.substituir ? '<button class="btn" id="btnConfirmarSubst152" onclick="confirmarImportacaoSaidas152()">Confirmar substituição e gravar no banco</button> <button class="btn secondary" onclick="bloquearConflitoSaidas152()">Voltar: bloquear esses meses</button> '
+        : (livres.length ? '<button class="btn" id="btnGravarLivres152" onclick="confirmarImportacaoSaidas152()">Gravar só os meses sem conflito</button> ' : '')+'<button class="btn secondary" id="btnSubstituir152" onclick="substituirConflitoSaidas152()">Substituir '+fcxEsc152(nomeOutros)+' em '+mesesConf+'…</button> ')
+      : '<button class="btn" onclick="confirmarImportacaoSaidas152()">Confirmar e gravar no banco</button> ';
+    h += '<div class="panel" id="saidasPendente152" style="border-color:#E3CF8E;background:#FFFAE8;"><h2>Conferir antes de gravar — '+fcxEsc152(pd.file)+'</h2><p class="desc">Modo: <b>'+fcxEsc152(rr.rotuloModo)+'</b>. '+motivo+'</p>'
+      +'<div class="scroll-table"><table><thead><tr><th>Mês</th><th class="num">Títulos no arquivo</th><th class="num">R$ no arquivo</th><th class="num">Já gravados</th><th class="num">R$ já gravados</th><th class="num">Substituídos</th><th class="num">Ficam no mês</th><th class="num">R$ no mês</th><th>Situação</th></tr></thead><tbody>'+lin+'</tbody></table></div>'+alerta
+      +(rr.avisos.length ? '<ul style="margin:8px 0 0 18px;font-size:12px;">'+rr.avisos.map(a=>'<li>'+fcxEsc152(a)+'</li>').join('')+'</ul>' : '')
+      +'<div class="savebar">'+botoes+'<button class="btn secondary" onclick="cancelarImportacaoSaidas152()">Cancelar</button></div></div>';
+  }
+  const g = state._saidasGravacao;
+  if(g){
+    const dh = g.em ? new Date(g.em).toLocaleString('pt-BR') : '';
+    if(g.ok){
+      const meses = (g.meses||[]).map(mes=>{ const m = g.porMes && g.porMes[mes]; return m ? '<div>Mês <b>'+fcxMes152(mes)+'</b>: '+m.n+' título(s) · '+fcxR152(m.cents)+' <span class="hint">(Pago: '+m.pago.n+' · '+fcxR152(m.pago.cents)+')</span></div>' : ''; }).join('');
+      const bt = g.bytes && g.bytes.compactado ? ' · compactado: '+fcxKB152(g.bytes.original)+' → '+fcxKB152(g.bytes.guardado) : '';
+      h += '<div class="panel" id="saidasGravacao152" data-ok="1" style="border-color:#BFDCC7;background:#F1FAF3;"><div style="font-size:15px;font-weight:700;color:#1f6b3a;">✔ '+fcxEsc152(g.rotulo)+': '+g.n+' registro(s) · '+fcxR152(g.cents)+' gravados em '+fcxEsc152(g.onde||'banco online')+'</div>'
+        +'<div style="margin-top:6px;font-size:13px;">'+meses+'</div><div class="hint" style="margin-top:6px;">Conferência '+(g.conferencia==='completa'?'completa (o conteúdo foi lido de volta do banco)':'no servidor (tamanho e impressão do JSON gravado)')+bt+' · '+fcxEsc152(dh)+'</div></div>';
+    } else {
+      h += '<div class="panel" id="saidasGravacao152" data-ok="0" style="border-color:#EAC5BF;background:var(--red-soft);"><div style="font-size:15px;font-weight:700;color:var(--red);">✖ '+fcxEsc152(g.rotulo||'Saídas')+': a gravação NÃO foi confirmada no banco</div><div style="margin-top:6px;font-size:13px;">'+fcxEsc152(g.erro||'Erro desconhecido.')+'</div><div class="hint" style="margin-top:6px;">'+fcxEsc152(dh)+'</div></div>';
+    }
+  }
+  return h;
+}
+
 
 if(!state._saidaForm) state._saidaForm = {date: toISO(new Date()), conta:'', centro:'', tipo:'previsto', valor:'', fornecedor:'', obs:''};
 if(!state._saidaFilter) state._saidaFilter = {month: toISO(new Date()).slice(0,7), conta:'', centro:'', tipo:'', soVencidos:false};
@@ -2647,7 +2817,7 @@ function renderTabSaidas(){
     <td style="color:var(--ink-soft);font-size:12px;">${s.fornecedor||''}${s.obs?' — '+s.obs:''}</td>
     <td><button class="btn danger" onclick="removeSaida('${s.id}')">Remover</button></td></tr>`;
 
-  return `
+  return `${fcxLeitor1522() ? fcxPainelSaidas152() : ''}
   <div class="panel" style="border-color:${totalVencido>0?'#EAC5BF':'var(--line)'};background:${totalVencido>0?'var(--red-soft)':'var(--panel)'};">
     <div class="row-flex">
       <div>
@@ -2661,14 +2831,14 @@ function renderTabSaidas(){
 
   <div class="panel">
     <h2>Importar saídas em massa</h2>
-    <p class="desc">Suba a planilha do sistema contábil (.xlsx ou .csv) com as colunas: Status, Fornecedor, Descrição, Valor, Vencimento, Conta Contábil, Centro de Custo. "A vencer"/"Pago"/"Renegociado" entram como Efetivo; "Previsto" entra como Previsto.</p>
-    <div class="dropzone">
+    <p class="desc">Suba a planilha do sistema contábil (.xlsx ou .csv) com as colunas: Status, Fornecedor, Descrição, Valor, Vencimento, Conta Contábil, Centro de Custo. "A vencer"/"Pago"/"Renegociado" entram como Efetivo; "Previsto" entra como Previsto.${fcxLeitor1522() ? ' Também reconhece sozinho (sem configurar nada) os dois arquivos de baixas dos ERPs: a Relação dos Títulos Pagos do ERP Legado (Excel; usa a aba PGTO*, e só a AgendaPagto se não houver) e o Contas a Pagar do ERP Sállamos (só Status Pago com Valor Pago maior que zero). Guarda a data e a conta do pagamento.' : ''}</p>
+    ${fcxLeitor1522() ? fcxHintImport152() : ''}<div class="dropzone">
       <div class="field" style="max-width:260px;margin:0 auto 10px;">
         <label>Ao importar</label>
-        <select onchange="setSaidasImportMode(this.value)">
+        ${fcxLeitor1522() ? fcxSelectModo152() : `<select onchange="setSaidasImportMode(this.value)">
           <option value="append">Adicionar aos lançamentos existentes</option>
           <option value="replace">Substituir todos os lançamentos</option>
-        </select>
+        </select>`}
       </div>
       <input type="file" accept=".xlsx,.xls,.csv" onchange="importSaidasFile(this)" style="max-width:340px;margin:0 auto;">
     </div>
